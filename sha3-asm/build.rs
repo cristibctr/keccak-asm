@@ -2,17 +2,24 @@ use std::{env, fs, path::Path, process::Command};
 
 fn main() {
     let target = Target::from_env();
+    let sha3;
+    if target.arch != "wasm32" {
+        let script = cryptogams_script(&target);
+        eprintln!("selected cryptogams script: {script}");
+        let src = Path::new(script).file_stem().unwrap().to_str().unwrap();
+        let ext = if target.is_msvc() { "asm" } else { "S" };
+        sha3 = Path::new(&env("OUT_DIR")).join(format!("{src}.{ext}"));
+        println!("cargo:rustc-env=SHA3_ASM_SRC={src}");
 
-    let script = cryptogams_script(&target);
-    eprintln!("selected cryptogams script: {script}");
-    let src = Path::new(script).file_stem().unwrap().to_str().unwrap();
-    let ext = if target.is_msvc() { "asm" } else { "S" };
-    let sha3 = Path::new(&env("OUT_DIR")).join(format!("{src}.{ext}"));
-    println!("cargo:rustc-env=SHA3_ASM_SRC={src}");
-
-    let flavor = cryptogams_script_flavor(&target);
-    eprintln!("selected cryptogams script flavor: {flavor:?}");
-    run_perlasm(script, flavor.as_deref(), &sha3);
+        let flavor = cryptogams_script_flavor(&target);
+        eprintln!("selected cryptogams script flavor: {flavor:?}");
+        run_perlasm(script, flavor.as_deref(), &sha3);
+    }
+    else {
+        let src_path = Path::new("Cargo.toml");
+        sha3 = Path::new(&env("OUT_DIR")).join("poly1305_global.wat");
+        fs::copy(&src_path, &sha3).expect("Failed to copy file");
+    }
 
     let mut cc = cc::Build::new();
     if target.is_any_arm() {
