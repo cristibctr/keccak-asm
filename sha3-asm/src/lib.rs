@@ -8,7 +8,7 @@ pub type Buffer = [u64; 25];
 
 // Derived from OpenSSL:
 // https://github.com/openssl/openssl/blob/60421893a286bb9eb7fb7c2454b84af9778ffca4/crypto/sha/keccak1600.c#L14-L17
-#[link(name = "keccak", kind = "static")]
+#[link(wasm_import_module = "keccak")]
 extern "C" {
     /// SHA-3 absorb, defined in assembly.
     ///

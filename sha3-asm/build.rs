@@ -33,30 +33,28 @@ fn main() {
         let preprocessor_renames = ["SHA3_squeeze", "SHA3_absorb"];
 
         cc.file(&sha3);
-        if target.arch != "wasm32" {
-            // MSVC's provided arm assembler does not support -D, only allowing PreDefine to be used.
-            // Unfortunately these are subtly different from -D, making them difficult to use when there
-            // might be symbol conflicts.
-            //
-            // Instead, we will do a find/replace on the assembly here.
-            if target.is_msvc() && target.is_any_arm() {
-                let mut assembly = fs::read_to_string(&sha3).unwrap();
-                for symbol in preprocessor_renames {
-                    assembly = assembly.replace(symbol, &format!("{symbol_prefix}_{symbol}"));
-                }
+        // MSVC's provided arm assembler does not support -D, only allowing PreDefine to be used.
+        // Unfortunately these are subtly different from -D, making them difficult to use when there
+        // might be symbol conflicts.
+        //
+        // Instead, we will do a find/replace on the assembly here.
+        if target.is_msvc() && target.is_any_arm() {
+            let mut assembly = fs::read_to_string(&sha3).unwrap();
+            for symbol in preprocessor_renames {
+                assembly = assembly.replace(symbol, &format!("{symbol_prefix}_{symbol}"));
+            }
 
-                fs::write(&sha3, &assembly).unwrap()
-            } else {
-                // we do not want to define anything for msvc + arm
-                for symbol in preprocessor_renames {
-                    // symbols with a _cext suffix are also shared
-                    let symbol_cext = format!("{symbol}_cext");
-                    for symbol in [symbol, &symbol_cext] {
-                        // sometimes the symbols have underscores
-                        cc.define(&format!("_{symbol}"), format!("_{symbol_prefix}_{symbol}").as_str());
-                        // and sometimes they do not
-                        cc.define(symbol, format!("{symbol_prefix}_{symbol}").as_str());
-                    }
+            fs::write(&sha3, &assembly).unwrap()
+        } else {
+            // we do not want to define anything for msvc + arm
+            for symbol in preprocessor_renames {
+                // symbols with a _cext suffix are also shared
+                let symbol_cext = format!("{symbol}_cext");
+                for symbol in [symbol, &symbol_cext] {
+                    // sometimes the symbols have underscores
+                    cc.define(&format!("_{symbol}"), format!("_{symbol_prefix}_{symbol}").as_str());
+                    // and sometimes they do not
+                    cc.define(symbol, format!("{symbol_prefix}_{symbol}").as_str());
                 }
             }
         }
@@ -64,10 +62,12 @@ fn main() {
         cc.compile("keccak");
     }
     else {
-        sha3 = Path::new(&env("OUT_DIR")).join("poly1305_global.wat");
-        let mut assembly = fs::read_to_string(&sha3).unwrap();
-        let wasm_bytes = wat2wasm(format!("{assembly}").as_bytes());
-        fs::write(Path::new("testmebaby"), &wasm_bytes).unwrap();
+        println!("looooooooooooool");
+        sha3 = Path::new("").join("cryptogams/webasm/poly1305_global.wat");
+        let assembly = fs::read_to_string(&sha3).unwrap();
+        let assembly_wat = format!("{assembly}");
+        let wasm_bytes = wat2wasm(assembly_wat.as_bytes());
+        fs::write(Path::new(&env("OUT_DIR")).join("libkeccak.wasm"), wasm_bytes.unwrap()).unwrap();
     }
 }
 
